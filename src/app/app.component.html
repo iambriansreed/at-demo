@@ -1,0 +1,38 @@
+<main>
+  <h1>Task</h1>
+  <section class="comments">
+    <h3>Comments</h3>
+    <ul>
+      @for (comment of comments; track comment.id;) {
+      <li [id]="comment.id">
+        <div class="message">Hello there {{ comment.id }}</div>
+        <div class="time">Brian Reed • 2024/08/01 11:56 AM</div>
+      </li>
+      }
+    </ul>
+    <form (ngSubmit)="onSubmit()" method="dialog">
+      <label for="comment">Comment</label>
+      <app-mention prefix="@" [getSuggestions]="getSuggestions">
+        <div
+          type="text"
+          class="text-field"
+          name="comment-message"
+          contenteditable
+        ></div>
+      </app-mention>
+      <footer>
+        <button type="submit">Submit</button>
+      </footer>
+    </form>
+  </section>
+</main>
+
+<!-- * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * -->
+<!-- * * * * * * * * * * * The content above * * * * * * * * * * * * -->
+<!-- * * * * * * * * * * is only a placeholder * * * * * * * * * * * -->
+<!-- * * * * * * * * * * and can be replaced.  * * * * * * * * * * * -->
+<!-- * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * -->
+<!-- * * * * * * * * * * End of Placeholder  * * * * * * * * * * * * -->
+<!-- * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * -->
+
+<router-outlet />
