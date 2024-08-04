@@ -12,7 +12,7 @@
     style="display: none"
   />
   <div class="dropdown" [style]="dropdownStyle">
-    <ul *ngIf="suggestions; else loading" data-mention-dropdown>
+    <ul *ngIf="suggestions && suggestions.length > 0" data-mention-dropdown>
       @for (suggestion of suggestions; track suggestion.id; let i = $index) {
       <li [class.selected]="selectedSuggestion === i">
         <button type="button" (click)="onSuggestionSelect(i)">
@@ -35,12 +35,7 @@
         </button>
       </li>
       }
-      <li *ngIf="suggestions.length === 0" class="none-found">
-        <span class="name">Nothing found</span>
-      </li>
     </ul>
-    <ng-template #loading>
-      <div class="loader"></div>
-    </ng-template>
+    <div *ngIf="suggestions === null" class="loader"></div>
   </div>
 </div>
