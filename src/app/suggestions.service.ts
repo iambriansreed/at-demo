@@ -1,15 +1,33 @@
+import { LocalizedString } from '@angular/compiler';
 import { Injectable } from '@angular/core';
 
 export type Suggestion = {
-  id: number;
-  name: string;
+  id: string;
+  label: string;
+  type: string;
+  avatar?: string;
 };
 
 const STATIC_SUGGESTIONS: Suggestion[] = [
-  { id: 1, name: 'Kevin' },
-  { id: 2, name: 'Jeff' },
-  { id: 3, name: 'Bryan' },
-  { id: 4, name: 'Gabbey' },
+  {
+    id: 'user:1',
+    label: 'Kevin',
+    type: 'user',
+  },
+  {
+    id: 'user:2',
+    label: 'Jeff',
+    type: 'user',
+  },
+  { id: 'user:3', label: 'Bryan', type: 'user' },
+
+  { id: 'user:4', label: 'Gabbey', type: 'user' },
+  {
+    id: 'user:5',
+    label: 'Brian',
+    avatar: 'https://avatars.githubusercontent.com/u/2301464?s=96&v=4',
+    type: 'user',
+  },
 ];
 
 @Injectable({
@@ -25,7 +43,7 @@ export class SuggestionsService {
       setTimeout(() => {
         resolve(
           STATIC_SUGGESTIONS.filter((s) =>
-            s.name.toLowerCase().includes(searchStr)
+            s.label.toLowerCase().includes(searchStr)
           )
         );
       }, 250);

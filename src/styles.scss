@@ -59,7 +59,11 @@ main {
     li {
       background: #37404d;
       border-radius: 0.5rem;
-      padding: 0.5rem;
+      padding: 1rem;
+
+      .mention {
+        color: hsl(211, 100%, 70%);
+      }
 
       .time {
         font-size: 0.8rem;

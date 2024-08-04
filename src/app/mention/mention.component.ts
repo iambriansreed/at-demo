@@ -3,7 +3,9 @@ import { Component, Input } from '@angular/core';
 import type { Suggestion } from '../suggestions.service';
 import updateMention from './updateMention';
 
-export type SuggestionsFn = (search: string) => Promise<Suggestion[]>;
+export type GetSuggestionsFn = (search: string) => Promise<Suggestion[]>;
+
+export type SuggestionSelectedFn = (selected: Suggestion) => void;
 
 @Component({
   selector: 'app-mention',
@@ -17,36 +19,42 @@ export class MentionComponent {
   prefix: string = '@';
 
   @Input({ required: true })
-  getSuggestions: SuggestionsFn | null = null;
+  getSuggestions: GetSuggestionsFn | null = null;
 
   suggestions: null | Suggestion[] = null;
   dropdownStyle: string | null = null;
-  mentionId: number = 100;
-  mention: string | null = null;
+  mentionText: string | null = null;
   selectedSuggestion: number | null = null;
   mentionElement: HTMLElement | null = null;
+  mentions: Suggestion['id'][] = [];
+
+  onInput = (event: Event) => {
+    let element = event.target as HTMLElement;
+
+    // if we are not in a contenteditable element ignore input
+    if (
+      !element ||
+      !(element instanceof HTMLElement) ||
+      !element.contentEditable
+    )
+      return;
+
+    // ensure the mention elements are still in the DOM if they aren't
+    this.mentions = this.mentions.filter((id) =>
+      element.querySelector(`[data-suggestion-id="${id}"]`)
+    );
+  };
 
   /**
    * Handle keydown events for the contenteditable element
-   * @param event
-   * @returns
-   * @description
-   * - If the key is the prefix, insert the mention element into the contenteditable element
-   * - If the key is Enter, select the suggestion and insert it into the contenteditable element
-   * - If the key is Escape, reset the mention component
-   * - If the key is ArrowDown or ArrowUp, select the next or previous suggestion
-   * - If the key is any other key, update the mention and get suggestions
-   * - If the mention has changed, get suggestions
-   * - If the mention is null, reset the mention component
-   * - If the mention element is null, reset the mention component
-   * - If the mention element has a suggestionId, set the mention element to be bold and not editable
    */
   onKeyDown = (event: KeyboardEvent) => {
+    let element = event.target as HTMLElement;
     // if we are not in a contenteditable element ignore input
     if (
-      !event.target ||
-      !(event.target instanceof HTMLElement) ||
-      !(event.target as HTMLElement).contentEditable
+      !element ||
+      !(element instanceof HTMLElement) ||
+      !element.contentEditable
     )
       return;
 
@@ -87,13 +95,14 @@ export class MentionComponent {
       return;
     }
 
-    const prevMention = this.mention;
-    this.mention = updateMention(event.key, this.mention, this.prefix);
+    const prevMention = this.mentionText;
+    this.mentionText = updateMention(event.key, this.mentionText, this.prefix);
 
     if (event.key === this.prefix) {
       const selection = window.getSelection()!;
 
       // create the mention element and insert it into the DOM
+      // todo: figure out the ANGULAR way to insert element
       const span = document.createElement('span');
       span.classList.add('mention');
       Object.assign(span.style, {
@@ -102,8 +111,8 @@ export class MentionComponent {
         marginRight: '0.25rem',
         color: 'hsl(211, 100%, 70%)',
       } as CSSStyleDeclaration);
-      span.id = 'mention-' + this.mentionId;
       span.textContent = this.prefix;
+
       selection.getRangeAt(0).insertNode(span);
 
       // move the cursor to the end of the mention element
@@ -121,14 +130,16 @@ export class MentionComponent {
       event.preventDefault();
     }
 
-    if (typeof prevMention !== typeof this.mention)
+    if (typeof prevMention !== typeof this.mentionText)
       // we only need to change the dropdown if the mention has changed from null to a value or vice versa
       this.toggleDropdown();
 
-    if (this.mention !== null) {
-      this.getSuggestions!(this.mention).then((suggestions) => {
+    if (this.mentionText !== null) {
+      this.getSuggestions!(this.mentionText).then((suggestions) => {
         this.suggestions = suggestions;
       });
+    } else {
+      this.resetMention();
     }
 
     return;
@@ -138,7 +149,7 @@ export class MentionComponent {
    * hides or shows the dropdown based on the mention
    */
   toggleDropdown = () => {
-    if (this.mention === null || !this.mentionElement) {
+    if (this.mentionText === null || !this.mentionElement) {
       this.dropdownStyle = null;
       return;
     }
@@ -152,11 +163,11 @@ export class MentionComponent {
   onSuggestionSelect(index: number) {
     if (!this.mentionElement) return;
 
+    const suggestion = this.suggestions![index];
+
     // insert the selected suggestion into the mentionElement
-    this.mentionElement.textContent =
-      this.prefix + this.suggestions![index].name;
-    this.mentionElement.dataset['suggestionId'] =
-      this.suggestions![index].id.toString();
+    this.mentionElement.textContent = this.prefix + suggestion.label;
+    this.mentionElement.dataset['suggestionId'] = suggestion.id.toString();
 
     // move the cursor to the space after the mention element
     this.mentionElement.after(' ');
@@ -167,12 +178,30 @@ export class MentionComponent {
     selection.removeAllRanges();
     selection.addRange(range);
 
+    this.mentions.push(suggestion.id);
+
     this.resetMention();
   }
 
   // reset the mention component when the contenteditable element loses focus
-  onBlur() {
-    this.resetMention();
+  onBlur(event: FocusEvent) {
+    // hacky way to move blur event after the dropdown click event
+    setTimeout(() => {
+      if (!this.mentionElement || !event.target) return;
+
+      const target = event.target as HTMLElement;
+
+      if (!!target.closest<HTMLElement>('.mention-container')) return;
+
+      console.log('targetElement', target);
+
+      console.log(
+        'mentionDropdown',
+        target.closest<HTMLElement>('[data-mention-dropdown]')
+      );
+
+      this.resetMention();
+    }, 1);
   }
 
   /**
@@ -180,8 +209,6 @@ export class MentionComponent {
    * This will remove the mention element from the DOM if a suggestion was not selected
    */
   resetMention = () => {
-    this.mentionId += 1;
-
     if (this.mentionElement) {
       if (this.mentionElement.dataset['suggestionId']) {
         Object.assign(this.mentionElement.style, {
@@ -192,7 +219,7 @@ export class MentionComponent {
     }
 
     this.mentionElement = null;
-    this.mention = null;
+    this.mentionText = null;
     this.suggestions = null;
     this.selectedSuggestion = null;
     this.toggleDropdown();
